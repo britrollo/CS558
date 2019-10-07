@@ -34,9 +34,11 @@ function main()
     subplot(2, 3, 4);
     imshow(img_sy);
     title("Sobel-Y");
-    % Step 3: Threshold the determinant of the Hessian
-    % Step 4: Apply Non-maximum suppression in 3x3 neighbors
-    
+    % Step 3: Threshold the determinant of the Hessian & Step 4: Apply Non-maximum suppression in 3x3 neighbors
+    img_hes = hessian(img, sigma, threshold, thres_h, sz);
+    subplot(2, 3, 5);
+    imshow(img_hes);
+    title("Hessian");
     
 end 
 
@@ -97,6 +99,8 @@ function bordered = myborder(edg, img, sz)
                 imgy = 1;
             end
         end
+    elseif strcmp(edg, "none")
+        bordered = img;
     end 
 end
 
@@ -122,7 +126,6 @@ function result = myfilter(img, sigma, threshold, filt, edg)
 %        Initialize result image
         result = zeros(size(c_img));
         
-        if edg
 %         pad image with edge type edg
         c_img = myborder(edg, c_img, wind_size);
 
@@ -293,7 +296,57 @@ function result = mynms(img, sobel_x, sobel_y)
     result = result/max(result(:));    
 end
 
-
-function result = hessian(img, sigma, threshold, sz)
-    G = myfilter(img, sigma, threshold, "gaussian", edg);
+function result = mynms2(img)
+    % Non-maximum suppression applied in 3x3 neighbors
+    [x,y] = size(img);
+    result = zeros(x, y);
+    for i=2:x-1
+        for j=2:y-1
+            neighbors = img(i-1:i+1, j-1:j+1);
+            % if img(i,j) is max - is added to resulting image
+            if max(neighbors(:)) == img(i,j)
+                result(i,j) = img(i, j);
+            end
+        end
+    end
 end
+
+
+function result = hessian(img, sigma, threshold, thres_h, sz)
+    edg = "none";
+    
+    % Gaussian smoothing
+    G = myfilter(img, sigma, threshold, "gaussian", edg);
+    
+    % First Derivative
+    Gx = myfilter(G, sigma, threshold, "sobel-x", edg);
+    Gy = myfilter(G, sigma, threshold, "sobel-y", edg);
+    % Second Derivative 
+    Gxx = myfilter(Gx, sigma, threshold, "sobel-x", edg);
+    Gxy = myfilter(Gy, sigma, threshold, "sobel-x", edg);
+    Gyy = myfilter(Gy, sigma, threshold, "sobel-y", edg);
+    
+    % Determinant of Hessian
+    determinant = Gxx.*Gyy-((Gxy)^2);
+    
+    % dimensions of img
+    [x,y] = size(img);
+    
+    % dimensions of determinant
+    [w, h] = size(determinant);
+    
+    % threshold the determinant
+    for i=1:w
+        for j=1:h
+            if determinant(i,j) < thres_h
+                determinant(i,j) = 0;
+            end
+        end
+    end
+    
+    % Apply Non-maximum suppression
+    result = mynms2(determinant);
+end
+
+
+
