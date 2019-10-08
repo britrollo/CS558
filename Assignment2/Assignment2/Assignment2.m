@@ -40,6 +40,13 @@ function main()
     imshow(img_hes);
     title("Hessian");
     
+    % Problem 2
+    lines = 4;  % Four lines
+    t = 2;      % distance threshold
+    s = 2;      % points to find line
+    p = 0.95    % probability for inlier
+    
+    
 end 
 
 function bordered = myborder(edg, img, sz)
@@ -348,5 +355,71 @@ function result = hessian(img, sigma, threshold, thres_h, sz)
     result = mynms2(determinant);
 end
 
+function b = isInlier(p1, p2, c)
+    
+end
 
 
+function result = myransac(hes, t, s, p, num_lines)
+    [y, x] = find(hes > 0);
+    f_points = [x y];
+    total_points = length(f_points);
+    
+    for n_lines=1:num_lines
+        count = 0;
+        N = inf;
+        best_inliers_count = 0;
+        best_inliers_index = [];
+        best_line = [];
+        
+        while N > count
+            p1_i = 0;
+            p2_i = 0;
+            % Step 1: Randomly select minimal subset of points
+            % randomly pick 2 different points from f_points array
+            while (p1_i == p2_i || p1_i == 0 || p2_i == 0)
+                % get random index of point in f_points
+                p1_i = round(rand*total_points);
+                p2_i = round(rand*total_points);
+            end
+            
+            % get point from f_point using random index
+            p1 = f_points(p1_i, :);
+            p2 = f_points(p2_i, :);
+            
+            % Step 2: Hypothesis a model : ax + by = d
+            a = p1(2)-p2(2);
+            b = p2(1)-p1(1);
+            d = (p1(2)*p2(1))-(p1(1)*p2(2));
+            
+            % Step 3: Compute error function
+            % && Step 4: Select points consistent with model - distance
+            % threshold
+            inliers = zeros(total_points);
+            for p=1:total_points
+                cur_point = f_points(p)
+                if (cur_point(1) ~= p1(1) && cur_point(2) ~= p1(2)) && (cur_point(1) ~= p2(1) && cur_point(2) ~= p2(2))
+                    dist = distToLine(cur_point, [a b d]);
+                    if dist <= t
+                        inliers(p) = cur_point;
+                    end
+                end
+            end
+            
+            inliers_count = length(inliers);
+            if inliers_count > best_inliers_count
+                best_inliers_count = inliers_count;
+                best_inliers_index = inliers;
+                best_line = [a b d];
+            end
+            
+            % Step 5: Repeat hypothesize-and-verify loop
+            % Repeat N times
+            e = 1 - length(inliers)/length(f_points);
+            N = log10(1-p)/log10(1-(1-e)^s);
+            count = count + 1;
+            
+            result = [best_line best_inliers_index];
+        end
+    end
+end
