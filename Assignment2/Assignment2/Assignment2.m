@@ -9,7 +9,9 @@ function main()
     
     sigma = 1;
     threshold = 95;
-    edg = "replicate";
+    edg = "none";
+    thres_h = 2;
+    sz = 1;
     
     img = imread("road.png");
     figure(1);
@@ -334,7 +336,7 @@ function result = hessian(img, sigma, threshold, thres_h, sz)
     Gyy = myfilter(Gy, sigma, threshold, "sobel-y", edg);
     
     % Determinant of Hessian
-    determinant = Gxx.*Gyy-((Gxy)^2);
+    determinant = (Gxx.*Gyy)-((Gxy).^2);
     
     % dimensions of img
     [x,y] = size(img);
@@ -355,7 +357,7 @@ function result = hessian(img, sigma, threshold, thres_h, sz)
     result = mynms2(determinant);
 end
 
-function b = isInlier(p1, p2, c)
+function b = distToLine(p1, p2, c)
     
 end
 
