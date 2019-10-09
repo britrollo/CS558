@@ -19,7 +19,7 @@ function main()
     imshow(img);  
     title("Original");
     
-    % Problem 1:
+    % Problem 1: Pre-processing
     % Step 1: Apply Gaussian
     img_g = myfilter(img, sigma, threshold, "gaussian", edg);
     subplot(2, 3, 2);
@@ -42,11 +42,15 @@ function main()
     imshow(img_hes);
     title("Hessian");
     
-    % Problem 2
-    lines = 4;  % Four lines
+    % Problem 2: RANSAC
+    n_lines = 4;  % Four lines
     t = 2;      % distance threshold
     s = 2;      % points to find line
-    p = 0.95    % probability for inlier
+    p = 0.95;    % probability for inlier
+    
+    myransac(img, img_hes, t, s, p, n_lines);
+    
+    % Problem 3: Hough Transform
     
     
 end 
@@ -357,21 +361,36 @@ function result = hessian(img, sigma, threshold, thres_h, sz)
     result = mynms2(determinant);
 end
 
-function b = distToLine(p1, p2, c)
-    
+function b = distToLine(p, l)
+%   l = line [a b d]
+%   p = point [x y]
+    b = abs(l(1)*p(1)+l(2)*p(2)-l(3)) / sqrt(l(1)^2 + l(2)^2);
 end
 
 
-function result = myransac(hes, t, s, p, num_lines)
+function myransac(img, hes, t, s, p, num_lines)
+%     img = original image
+%     hes = img after hessian applied
+%     t = distance threshold
+%     s = points to fine shape
+%     p = probability for inlier
+%     num_lines = number of lines to calculate
+    
+    % Find feature points in hessian
     [y, x] = find(hes > 0);
+    
+    % Initialize figure
+    f = figure; imshow(img), hold on;
+    
     f_points = [x y];
     total_points = length(f_points);
     
+    
     for n_lines=1:num_lines
         count = 0;
-        N = inf;
+        N = Inf;
         best_inliers_count = 0;
-        best_inliers_index = [];
+        best_inliers_idx = [];
         best_line = [];
         
         while N > count
@@ -397,31 +416,87 @@ function result = myransac(hes, t, s, p, num_lines)
             % Step 3: Compute error function
             % && Step 4: Select points consistent with model - distance
             % threshold
-            inliers = zeros(total_points);
-            for p=1:total_points
-                cur_point = f_points(p)
-                if (cur_point(1) ~= p1(1) && cur_point(2) ~= p1(2)) && (cur_point(1) ~= p2(1) && cur_point(2) ~= p2(2))
-                    dist = distToLine(cur_point, [a b d]);
-                    if dist <= t
-                        inliers(p) = cur_point;
-                    end
-                end
+
+            % Calculate the distance from each point to the line
+            dist = Inf(size(f_points,1), 1);
+            for p=1:length(f_points)
+                cur_point = f_points(p, :);
+                dist(p) = distToLine(cur_point, [a b d]);
             end
+            % Find inliers - points within the distance threshold of the
+            % line
+            inliers = find(dist <= t);
             
-            inliers_count = length(inliers);
+            % Keep track of greatest number of inliers
+            inliers_count = size(inliers, 1);
             if inliers_count > best_inliers_count
                 best_inliers_count = inliers_count;
-                best_inliers_index = inliers;
+                best_inliers_idx = inliers;
                 best_line = [a b d];
             end
             
             % Step 5: Repeat hypothesize-and-verify loop
             % Repeat N times
             e = 1 - length(inliers)/length(f_points);
-            N = log10(1-p)/log10(1-(1-e)^s);
+            N = log(1-p)/log(1-power((1-e),s));
             count = count + 1;
             
-            result = [best_line best_inliers_index];
+        end
+        
+        % Get inlier points from indexes found
+        i_points = f_points(best_inliers_idx, :);
+        % Draw line on photo
+        [~, idx1] = min(i_points(:, 1));
+        [~, idx2] = max(i_points(:, 1));
+        figure(f), hold on;
+        plot(i_points([idx1 idx2],1), i_points([idx1 idx2],2), "LineWidth", 1.2), hold on;
+        
+        lx = i_points(idx1,1):i_points(idx2,1);
+        ly = (best_line(3)-best_line(1).*lx)./best_line(2);
+        plot(lx, ly, 'b'), hold on;
+        
+        for i=1:best_inliers_count
+            px = i_points(i,1);
+            py = i_points(i,2);
+            [xx, yy] = meshgrid(px-1:px+1, py-1:py+1);
+            hold on;
+            sq = scatter(xx(:), yy(:), 'square', 'y');
         end
     end
+end
+
+
+function result = myhough(img, hes, theta, rho, num_lines)
+    [X Y] = size(img);
+     % Find feature points in hessian
+    [y, x] = find(hes > 0);
+    
+    % Initialize figure
+    f = figure; imshow(img), hold on;
+    
+    f_points = [x y];
+    
+    total_points = length(f_points);
+    maximum_rho = norm(size(img));
+    rho = -maximum_rho:rho:maximum_rho;
+    xtheta = 0:theta:pi;
+    index = 1:prod(size(xtheta));
+    H = zeros(prod(size(xtheta)), prod(size(rho)));
+    
+    for i=1:total_points
+        % For each feature point (x,y) in image
+        x = f_points(i,1);
+        y = f_points(i,2);
+        % For theta = 0 to 180 (pi)
+        for t=0:theta:pi
+            r = x.*cos(t) + y.*sin(t);
+            H(t, r) = H(t, r)+1;
+        end
+    end
+    
+    
+    for n_lines=1:num_lines
+        
+    end
+    
 end
