@@ -526,7 +526,7 @@ function myhough(img, hes, theta, rho, num_lines)
         % For theta = 0 to 180 (pi)
         for t=1:theta:pi
             r = x*cos(t) + y*sin(t);
-            it = round(t*100+1);
+            it = round(t*100);
             ir = round(r + Hheight/2);
             H(ir, it) = H(ir, it)+1;
         end
@@ -562,12 +562,12 @@ function myhough(img, hes, theta, rho, num_lines)
         ir = mod(idx, Hheight);
         it = (idx-ir)/Hheight+1;
         r = ir-Hheight/2;
-        t = (it-1)/100.0;
+        t = (it)/100.0;
         
         x=1:Y;
         y=(r-x.*cos(t))/sin(t);
         
-        plot(x, y, 'LineWidth', 1.33);
+        figure(f5); plot(x, y, 'LineWidth', 1.33), hold on;
         
         tempH(ir-1:ir+1, it-1:it+1)=0;
     end
