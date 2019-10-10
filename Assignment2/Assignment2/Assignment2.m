@@ -550,6 +550,7 @@ function myhough(img, hes, theta, rho, num_lines)
         tempH(ir-1:ir+1, it-1:it+1)=0;
     end
     hold off;
+    drawnow;
     
     
     % Plot num_lines lines on image
@@ -572,4 +573,5 @@ function myhough(img, hes, theta, rho, num_lines)
         tempH(ir-1:ir+1, it-1:it+1)=0;
     end
     hold off;
+    drawnow;
 end
