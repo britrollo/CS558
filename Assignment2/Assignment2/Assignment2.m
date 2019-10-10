@@ -8,10 +8,9 @@ function main()
     clear variables;
     
     sigma = 1;
-    threshold = 95;
+    threshold = 20;
     edg = "none";
-    thres_h = 2;
-    sz = 1;
+    thres_h = 5;
     
     img = imread("road.png");
     figure(1);
@@ -37,21 +36,25 @@ function main()
     imshow(img_sy);
     title("Sobel-Y");
     % Step 3: Threshold the determinant of the Hessian & Step 4: Apply Non-maximum suppression in 3x3 neighbors
-    img_hes = hessian(img, sigma, threshold, thres_h, sz);
+    img_hes = hessian(img, sigma, threshold, thres_h);
     subplot(2, 3, 5);
     imshow(img_hes);
     title("Hessian");
+    figure(6);
+    imshow(img_hes);
     
     % Problem 2: RANSAC
     n_lines = 4;  % Four lines
-    t = 2;      % distance threshold
+    t = 0.5;      % distance threshold
     s = 2;      % points to find line
     p = 0.95;    % probability for inlier
     
     myransac(img, img_hes, t, s, p, n_lines);
     
     % Problem 3: Hough Transform
-    
+    rho = 1;
+    theta = 0.01;
+    myhough(img, img_hes, theta, rho, n_lines);
     
 end 
 
@@ -310,6 +313,8 @@ function result = mynms(img, sobel_x, sobel_y)
 end
 
 function result = mynms2(img)
+    % img = preprocessed image
+    
     % Non-maximum suppression applied in 3x3 neighbors
     [x,y] = size(img);
     result = zeros(x, y);
@@ -325,7 +330,12 @@ function result = mynms2(img)
 end
 
 
-function result = hessian(img, sigma, threshold, thres_h, sz)
+function result = hessian(img, sigma, threshold, thres_h)
+    % img = image
+    % sigma = for gaussian filter
+    % threshold = for sobel filter
+    % thres_h = for hessian filter
+    
     edg = "none";
     
     % Gaussian smoothing
@@ -368,12 +378,12 @@ function b = distToLine(p, l)
 end
 
 
-function myransac(img, hes, t, s, p, num_lines)
+function myransac(img, hes, t, s, pc, num_lines)
 %     img = original image
 %     hes = img after hessian applied
 %     t = distance threshold
 %     s = points to fine shape
-%     p = probability for inlier
+%     pc = confidence
 %     num_lines = number of lines to calculate
     
     % Find feature points in hessian
@@ -384,7 +394,6 @@ function myransac(img, hes, t, s, p, num_lines)
     
     f_points = [x y];
     total_points = length(f_points);
-    
     
     for n_lines=1:num_lines
         count = 0;
@@ -399,9 +408,8 @@ function myransac(img, hes, t, s, p, num_lines)
             % Step 1: Randomly select minimal subset of points
             % randomly pick 2 different points from f_points array
             while (p1_i == p2_i || p1_i == 0 || p2_i == 0)
-                % get random index of point in f_points
-                p1_i = round(rand*total_points);
-                p2_i = round(rand*total_points);
+                p1_i = ceil(rand*total_points);
+                p2_i = ceil(rand*total_points);
             end
             
             % get point from f_point using random index
@@ -409,9 +417,14 @@ function myransac(img, hes, t, s, p, num_lines)
             p2 = f_points(p2_i, :);
             
             % Step 2: Hypothesis a model : ax + by = d
+            % Slope
+            m = (p1(2)-p2(2))/(p1(1)-p1(1));
+            
+            c = p1(2) - m*p1(1);
+            
             a = p1(2)-p2(2);
             b = p2(1)-p1(1);
-            d = (p1(2)*p2(1))-(p1(1)*p2(2));
+            d = p1(2)*p2(1)-p1(1)*p2(2);
             
             % Step 3: Compute error function
             % && Step 4: Select points consistent with model - distance
@@ -419,9 +432,9 @@ function myransac(img, hes, t, s, p, num_lines)
 
             % Calculate the distance from each point to the line
             dist = Inf(size(f_points,1), 1);
-            for p=1:length(f_points)
-                cur_point = f_points(p, :);
-                dist(p) = distToLine(cur_point, [a b d]);
+            for pt=1:length(f_points)
+                cur_point = f_points(pt, :);
+                dist(pt) = distToLine(cur_point, [a b d]);
             end
             % Find inliers - points within the distance threshold of the
             % line
@@ -437,10 +450,9 @@ function myransac(img, hes, t, s, p, num_lines)
             
             % Step 5: Repeat hypothesize-and-verify loop
             % Repeat N times
-            e = 1 - length(inliers)/length(f_points);
-            N = log(1-p)/log(1-power((1-e),s));
-            count = count + 1;
-            
+            e = 1 - (inliers_count/total_points);
+            N = log(1-pc)/log(1-power((1-e),s));
+            count = count + 1;       
         end
         
         % Get inlier points from indexes found
@@ -449,11 +461,11 @@ function myransac(img, hes, t, s, p, num_lines)
         [~, idx1] = min(i_points(:, 1));
         [~, idx2] = max(i_points(:, 1));
         figure(f), hold on;
-        plot(i_points([idx1 idx2],1), i_points([idx1 idx2],2), "LineWidth", 1.2), hold on;
+        plot(i_points([idx1 idx2],1), i_points([idx1 idx2],2), "LineWidth", 1), hold on;
         
         lx = i_points(idx1,1):i_points(idx2,1);
         ly = (best_line(3)-best_line(1).*lx)./best_line(2);
-        plot(lx, ly, 'b'), hold on;
+        plot(lx, ly, "LineWidth", 1), hold on;
         
         for i=1:best_inliers_count
             px = i_points(i,1);
@@ -462,41 +474,86 @@ function myransac(img, hes, t, s, p, num_lines)
             hold on;
             sq = scatter(xx(:), yy(:), 'square', 'y');
         end
+        hold off;
     end
 end
 
 
-function result = myhough(img, hes, theta, rho, num_lines)
+function myhough(img, hes, theta, rho, num_lines)
+% img = original image
+% hes = image after hessian filter
+% theta = dimension of bin of accumulator theta
+% rho = dimension of bin of accumulator rho
+% num_lines = number of lines to display on image
     [X Y] = size(img);
      % Find feature points in hessian
     [y, x] = find(hes > 0);
     
-    % Initialize figure
-    f = figure; imshow(img), hold on;
-    
     f_points = [x y];
     
     total_points = length(f_points);
-    maximum_rho = norm(size(img));
+    
+    maximum_rho = floor(sqrt(X^2 + Y^2));
     rho = -maximum_rho:rho:maximum_rho;
     xtheta = 0:theta:pi;
-    index = 1:prod(size(xtheta));
-    H = zeros(prod(size(xtheta)), prod(size(rho)));
+    Hheight = numel(rho);
+    Hwidth = numel(xtheta);
+    H = zeros(Hheight, Hwidth);
     
     for i=1:total_points
         % For each feature point (x,y) in image
         x = f_points(i,1);
         y = f_points(i,2);
         % For theta = 0 to 180 (pi)
-        for t=0:theta:pi
-            r = x.*cos(t) + y.*sin(t);
-            H(t, r) = H(t, r)+1;
+        for t=1:theta:pi
+            r = x*cos(t) + y*sin(t);
+            it = round(t*100+1);
+            ir = round(r + Hheight/2);
+            H(ir, it) = H(ir, it)+1;
         end
     end
     
+     
     
-    for n_lines=1:num_lines
+    % Peak Votes plot
+    f2 = figure; imagesc(H), colormap gray, hold on;
         
+    tempH = H;
+    for n_lines=1:num_lines
+        [~, idx] = max(tempH(:));
+        
+        ir = mod(idx, Hheight);
+        it = (idx-ir)/Hheight+1;
+        r = ir-Hheight/2;
+        t = (it-1)/100.0;
+
+        figure(f2); scatter(it, ir, 'r');
+        
+        x=1:Y;
+        y=(r-x.*cos(t))/sin(t);
+        
+        tempH(ir-1:ir+1, it-1:it+1)=0;
     end
+    hold off;
     
+    f5 = figure; imshow(img), hold on;
+    
+
+    tempH = H;
+    for n_lines=1:num_lines
+        [~, idx] = max(tempH(:));
+        
+        ir = mod(idx, Hheight);
+        it = (idx-ir)/Hheight+1;
+        r = ir-Hheight/2;
+        t = (it-1)/100.0;
+        
+        x=1:Y;
+        y=(r-x.*cos(t))/sin(t);
+        
+        plot(x, y, 'LineWidth', 1.5);
+        
+        tempH(ir-1:ir+1, it-1:it+1)=0;
+    end
+    hold off;
 end
