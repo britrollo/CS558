@@ -1,7 +1,7 @@
 % Brianne Trollo
 % CS 558: Computer Vision
 % 10 October 2019
-% Assignment 2
+% Assignment 2: Line Detection
 
 function main()
     close all;
@@ -59,6 +59,9 @@ function main()
 end 
 
 function bordered = myborder(edg, img, sz)
+    % edg = edge type (replicate, clip, none)
+    % img = original image
+    % sz = size of border to add
 % Replicate boundary pixels
     img = double(img);
     [x, y] = size(img);
@@ -115,6 +118,7 @@ function bordered = myborder(edg, img, sz)
                 imgy = 1;
             end
         end
+   % No boundary
     elseif strcmp(edg, "none")
         bordered = img;
     end 
@@ -122,6 +126,10 @@ end
 
 
 function result = myfilter(img, sigma, threshold, filt, edg)
+    % img = original image
+    % sigma = gaussian sigma filter
+    % threshold = threshold for sobel filter
+    % edg = what to do with boundary pixels
     c_img = double(img);
 %     Gaussian Filter
     if strcmp(filt, "gaussian")
@@ -235,6 +243,9 @@ end
 
 % Non-maximum Suppression
 function result = mynms(img, sobel_x, sobel_y)
+    % img = original image
+    % sobel_x = horizontal sobel filtered result
+    % sobel_y = vertical sobel filtered result 
     c_img = double(img);
     
     angle_matrix = atan2(double(sobel_y), double(sobel_x))*180/pi;
@@ -395,6 +406,7 @@ function myransac(img, hes, t, s, pc, num_lines)
     f_points = [x y];
     total_points = length(f_points);
     
+    % Run ransac to create num_lines 
     for n_lines=1:num_lines
         count = 0;
         N = Inf;
@@ -417,11 +429,13 @@ function myransac(img, hes, t, s, pc, num_lines)
             p2 = f_points(p2_i, :);
             
             % Step 2: Hypothesis a model : ax + by = d
+            % y = mx + c
             % Slope
             m = (p1(2)-p2(2))/(p1(1)-p1(1));
-            
+            % y-intercept
             c = p1(2) - m*p1(1);
             
+            % ax + by = d
             a = p1(2)-p2(2);
             b = p2(1)-p1(1);
             d = p1(2)*p2(1)-p1(1)*p2(2);
@@ -472,7 +486,7 @@ function myransac(img, hes, t, s, pc, num_lines)
             py = i_points(i,2);
             [xx, yy] = meshgrid(px-1:px+1, py-1:py+1);
             hold on;
-            sq = scatter(xx(:), yy(:), 'square', 'y');
+            scatter(xx(:), yy(:), 'square', 'y');
         end
         hold off;
     end
@@ -485,21 +499,26 @@ function myhough(img, hes, theta, rho, num_lines)
 % theta = dimension of bin of accumulator theta
 % rho = dimension of bin of accumulator rho
 % num_lines = number of lines to display on image
-    [X Y] = size(img);
+    [X, Y] = size(img);
      % Find feature points in hessian
     [y, x] = find(hes > 0);
     
+    % Feature pooints
     f_points = [x y];
     
+    % Number of feature points
     total_points = length(f_points);
     
     maximum_rho = floor(sqrt(X^2 + Y^2));
     rho = -maximum_rho:rho:maximum_rho;
     xtheta = 0:theta:pi;
+    
+    % Accumulator
     Hheight = numel(rho);
     Hwidth = numel(xtheta);
     H = zeros(Hheight, Hwidth);
     
+    % Voting 
     for i=1:total_points
         % For each feature point (x,y) in image
         x = f_points(i,1);
@@ -519,25 +538,22 @@ function myhough(img, hes, theta, rho, num_lines)
     f2 = figure; imagesc(H), colormap gray, hold on;
         
     tempH = H;
+    % Circle highest supported num_lines lines 
     for n_lines=1:num_lines
         [~, idx] = max(tempH(:));
         
         ir = mod(idx, Hheight);
         it = (idx-ir)/Hheight+1;
-        r = ir-Hheight/2;
-        t = (it-1)/100.0;
 
         figure(f2); scatter(it, ir, 'r');
-        
-        x=1:Y;
-        y=(r-x.*cos(t))/sin(t);
         
         tempH(ir-1:ir+1, it-1:it+1)=0;
     end
     hold off;
     
-    f5 = figure; imshow(img), hold on;
     
+    % Plot num_lines lines on image
+    f5 = figure; imshow(img), hold on;
 
     tempH = H;
     for n_lines=1:num_lines
@@ -551,7 +567,7 @@ function myhough(img, hes, theta, rho, num_lines)
         x=1:Y;
         y=(r-x.*cos(t))/sin(t);
         
-        plot(x, y, 'LineWidth', 1.5);
+        plot(x, y, 'LineWidth', 1.33);
         
         tempH(ir-1:ir+1, it-1:it+1)=0;
     end
