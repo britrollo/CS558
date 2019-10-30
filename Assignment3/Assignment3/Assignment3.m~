@@ -228,15 +228,12 @@ end
 
 function mag = gradient_mag(g)
     % Parameters
-        % g
     % Results
 end
 
 function result = rbg_gradient(c, low, right)
     % Parameters
-        % c - center x,y coordinates
-        % low - x,y coordinates below c
-        % right - x,y coordinates to right of c
+        % c - center x,y cor
     % Results
 end
 
