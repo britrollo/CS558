@@ -6,12 +6,12 @@ function main ()
     imshow(img);
     result = k_means(k, img);
     figure(2);
-    imshow(result, []); %why is it nor printing color?
+    imshow(uint8(result)); %why is it not printing color?
    
     %SLIC 
-    img2 = imread("wt_slic.png");
-    figure(3);
-    imshow(img2);
+%     img2 = imread("wt_slic.png");
+%     figure(3);
+%     imshow(img2);
     
 end
 
@@ -228,15 +228,24 @@ end
 
 
 function result = slic(img)
+%     get size of image
+    [X, Y, c] = size(img);
+    
+%     Set maximum iteration value
+    max_iter = 3;
+    
 %%%%% STEP 1: Initialization: Divide the image in blocks of
-%%%%% 50x50 pixels and initialize a centroid at the center
-%%%%% of each block
+%%%%% 50x50 pixels
+
+%%%%% initialize a centroid at the center of each block
 
 %%%%% STEP 2: Local Shift: Compute the magnitude of the 
-%%%%% gradient in each of the RGB channels and use the
-%%%%% square root of the sum of squares of the three 
-%%%%% magnitudes as the combined gradient magnitude. Move
-%%%%% the centroids to the position with the smallest 
+%%%%% gradient in each of the RGB channels 
+
+%%%%% use the square root of the sum of squares of the three 
+%%%%% magnitudes as the combined gradient magnitude
+
+%%%%% Move the centroids to the position with the smallest 
 %%%%% gradient magnitude in 3x3 windows centered on the 
 %%%%% initial centroids.
 
@@ -252,7 +261,7 @@ function result = slic(img)
 %%%%% STEP 5: If (not converged) and (iterations < max_iter)
 %%%%% THEN go to STEP 2. max_iter = 3
 
-%%%%% STEP 6L Display the output image as in teh SLIC slide:
+%%%%% STEP 6: Display the output image as in teh SLIC slide:
 %%%%% colorpixels that touch two different clusters black
 %%%%% and the remaining pixels by the average RGB value of
 %%%%% their cluster.
