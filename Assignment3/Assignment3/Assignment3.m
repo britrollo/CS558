@@ -1,17 +1,18 @@
 function main ()
-    %k-means
-    k = 10;
-    img = imread("white-tower.png");
-    figure(1);
-    imshow(img);
-    result = k_means(k, img);
-    figure(2);
-    imshow(uint8(result)); %why is it not printing color?
+%     %k-means
+%     k = 10;
+%     img = imread("white-tower.png");
+%     figure(1);
+%     imshow(img);
+%     result = k_means(k, img);
+%     figure(2);
+%     imshow(uint8(result));
    
     %SLIC 
-%     img2 = imread("wt_slic.png");
-%     figure(3);
-%     imshow(img2);
+    img2 = imread("wt_slic.png");
+    figure(3);
+    imshow(img2);
+    
     
 end
 
