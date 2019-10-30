@@ -205,8 +205,6 @@ function result = k_means(k, img)
         end
     end
     
-    disp(c_avg_rgb);
-    
     % Set new image coordinates to RGB average of each cluster 
     for ci=1:k
         for i=1:(X*Y)
