@@ -253,20 +253,38 @@ function result = rbg_gradient(c, low, right)
 end
 
 function ci = fived_distance(n, centroids, x, y, rgb)
+    % Parameters
+        % n - number of centroids
+        % centroids - list of centroids -> [ x y r g b ]
+        % x - x-coordinate of image pixel
+        % y - y-coordinate of image pixel
+        % rgb - rgb values of image pixel -> [ r g b ]
+    % Results
+        % ci - index of closest centroid
     closest_dist = inf;
     closest_c = 0;
+    
+    % Point rgb values
+    pr = rgb(1);
+    pg = rgb(2);
+    pb = rgb(3);
     for ci=1:n
         % Cluster RGB values 
-        crgb = centroids(ci, :);
-        cr = crgb(1);
-        cg = crgb(2);
-        cb = crgb(3);
+        cxyrgb = centroids(ci, :);
+        cx = cxyrgb(1);
+        cy = cxyrgb(2);
+        cr = cxyrgb(3);
+        cg = cxyrgb(4);
+        cb = cxyrgb(5);
         
         % Calculate color distance
         r = (cr - pr)^2;
         g = (cg - pg)^2;
         b = (cb - pb)^2;
-        dis = sqrt(r + g + b);
+        % Calculate x,y distance divided by 2
+        xd = ((cx - x)/2)^2; 
+        yd = ((cy - y)/2)^2;
+        dis = sqrt(xd + yd + r + g + b);
         if dis < closest_dist
             closest_dist = dis;
             closest_c = ci;
@@ -279,7 +297,9 @@ function result = slic(img)
 %     get size of image
     [X, Y, colors] = size(img);
     
+%     Get img values as double
     img = double(img);
+    
 %     Set maximum iteration value
     max_iter = 3;
     
@@ -291,7 +311,7 @@ function result = slic(img)
 %%%%% initialize a centroid at the center of each block
     % centroids holds the (x,y) coordinates and rgb values
     % of the centroids
-    % [ x y r g b ]
+    % centroids - > [ x y r g b ]
     centroids = zeros(nblocks, 5);
     n = 1;
     for i=0:blocksize:X
@@ -334,6 +354,8 @@ function result = slic(img)
         % Find minimum
         win_min = min(min(window));
         [mx, my] = find(window == win_min);
+        mx = mx(1);
+        my = my(1);
         r = img(mx, my, 1);
         g = img(mx, my, 2);
         b = img(mx, my, 3);
@@ -346,6 +368,8 @@ function result = slic(img)
     
 %%%%% STEP 3: Centroid Update: Assign each pixel to its 
 %%%%% nearest centroid in the 5D space of x, y, R, G, B
+%%%%% and recompute centroids. Use the Euclidean distance
+%%%%% in this space, but divide x and y by 2.
 
     % Initialize clustered to hold pixel locations and rgb values
     % clustered -> [ ci x y r g b ]
@@ -362,23 +386,21 @@ function result = slic(img)
             clustered(n, 5) = rgb(2);
             clustered(n, 6) = rgb(3);
             
-            ci = fived_distance(nblocks, centroids, i, j, rgb);
+            % compute 5D distance 
+            clustered(n,1) = fived_distance(nblocks, centroids, i, j, rgb);
             
             n = n + 1;
         end
     end
         
-%%%%% and recompute centroids. Use the Euclidean distance
-%%%%% in this space, but divide x and y by 2.
-
-%%%%% STEP 4: Optionally: only compare pixels to centroids
+%%%%% Optionally: only compare pixels to centroids
 %%%%% within a distance of 71 pixels (~sqrt(2)*50 block size)
 %%%%% during the updates.
 
-%%%%% STEP 5: If (not converged) and (iterations < max_iter)
+%%%%% STEP 4: If (not converged) and (iterations < max_iter)
 %%%%% THEN go to STEP 2. max_iter = 3
 
-%%%%% STEP 6: Display the output image as in the SLIC slide:
+%%%%% STEP 5: Display the output image as in the SLIC slide:
 %%%%% colorpixels that touch two different clusters black
 %%%%% and the remaining pixels by the average RGB value of
 %%%%% their cluster.
