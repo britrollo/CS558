@@ -293,6 +293,37 @@ function ci = fived_distance(n, centroids, x, y, rgb)
     ci = closest_c;
 end
 
+function result = cluster_edge(c_img, clusters, i, img)
+    % Parameters
+        % c_img - pixel ci marked at x,y pixel coordinate
+        % clusters - [ ci x y r g b ]
+        % i - clusters(i) = current pixel
+        % img - resulting image
+    % Results 
+        % result -
+            % 0 - is not between two clusters
+            % 1 - is the edge between two clusters
+    [X,Y] = size(img);
+    ci = clusters(i, 1);
+    cx = clusters(i, 2);
+    cy = clusters(i, 3);
+    if cx-1 > 0 && c_img(cx-1, cy) ~= ci
+        result = 1;
+        rgb = img(cx-1, cy, :);
+        if rgb(1) == 0 && rgb(2) == 0 && rgb(3) == 0
+            result = 0;
+            return;
+        end
+    elseif cx+1 =< X && c_img(cx+1, cy) ~= ci
+        result = 1;
+        rgb = img(cx-1, cy, :);
+        if rgb(1) == 0 && rgb(2) == 0 && rgb(3) == 0
+            result = 0;
+            return;
+        end
+    end
+end 
+
 function result = slic(img)
 %     get size of image
     [X, Y, colors] = size(img);
@@ -331,8 +362,8 @@ function result = slic(img)
     
 %%%%% STEP 2: Local Shift: Compute the magnitude of the 
 %%%%% gradient in each of the RGB channels 
-%   
-    
+%   iteration count
+    iter = 1;
 %   flag for stopping loop
     flag = 0;
     while flag == 0
@@ -381,6 +412,7 @@ function result = slic(img)
         % Initialize clustered to hold pixel locations and rgb values
         % clustered -> [ ci x y r g b ]
         clustered = zeros(X*Y, 6);
+        cluster_label_img = zeros(X,Y);
         n = 1;
         for i=1:X
             for j=1:Y
@@ -394,8 +426,10 @@ function result = slic(img)
                 clustered(n, 6) = rgb(3);
 
                 % compute 5D distance 
-                clustered(n,1) = fived_distance(nblocks, centroids, i, j, rgb);
-
+                ci = fived_distance(nblocks, centroids, i, j, rgb);
+                clustered(n,1) = ci;
+                cluster_label_img(i, j) = ci;
+                
                 n = n + 1;
             end
         end
@@ -445,5 +479,54 @@ function result = slic(img)
 %%%%% colorpixels that touch two different clusters black
 %%%%% and the remaining pixels by the average RGB value of
 %%%%% their cluster.
+
+    % Initialize resulting image
+    c_img = zeros(X, Y, 3);
+    % Calculate average RGB value of cluster
+    c_avg_rgb = zeros(nblocks, 3);
+    for ci=1:nblocks
+        n = 0;
+        sumr = 0;
+        sumg = 0;
+        sumb = 0;
+        for i=1:(X*Y)
+            % clustered -> [ ci x y r g b ]
+            if clustered(i, 1) == ci
+                n = n + 1;
+                % pixel coordinates from cluster ci
+                px = clustered(i,2);
+                py = clustered(i,3);
+                % RGB value from original image
+                rgb = img(px, py, :);
+                sumr = sumr + rgb(1);
+                sumg = sumg + rgb(2);
+                sumb = sumb + rgb(3);
+            end
+            c_avg_rgb(ci, 1) = floor(sumr/n);
+            c_avg_rgb(ci, 2) = floor(sumg/n);
+            c_avg_rgb(ci, 3) = floor(sumb/n);
+        end
+    end
     
+    % Set new image coordinates to RGB average of each cluster 
+    for ci=1:nblocks
+        for i=1:(X*Y)
+            if clustered(i, 1) == ci
+                if cluster_edge(cluster_label_img, clustered, i) == 1
+                    
+                else
+                    x = clustered(i, 2);
+                    y = clustered(i, 3);
+                    r = c_avg_rgb(ci, 1);
+                    g = c_avg_rgb(ci, 2);
+                    b = c_avg_rgb(ci, 3);
+                    c_img(x, y, 1) = r;
+                    c_img(x, y, 2) = g;
+                    c_img(x, y, 3) = b;
+                end
+            end
+        end
+    end
+    
+    result = c_img;
 end
