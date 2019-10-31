@@ -76,7 +76,7 @@ function result = closest_cluster(img, px, py, c)
     return;
 end
 
-function result = check_ci(og, newc, k)
+function result = check_ci(og, newc)
     % Parameters
         % og -> original cluster centers
         % newc -> new cluster centers
@@ -167,7 +167,7 @@ function result = k_means(k, img)
         end
 
 %%%%%%%% STEP 4: If ci have changed, repeat STEP 2
-        flag = check_ci(cluster_centers, new_cluster_centers, k);
+        flag = check_ci(cluster_centers, new_cluster_centers);
         if flag == 0
             % Check for NaN values and 
             % keep original center is new one is NaN
@@ -314,10 +314,10 @@ function result = slic(img)
     % centroids - > [ x y r g b ]
     centroids = zeros(nblocks, 5);
     n = 1;
-    for i=0:blocksize:X
-        for j=0:blocksize:Y
-            x=(i+blocksize)/2;
-            y=(j+blocksize)/2;
+    for i=0:blocksize:X-1
+        for j=0:blocksize:Y-1
+            x= i+(blocksize/2);
+            y=j+(blocksize/2);
             ci_rgb=img(x,y,:);
             centroids(n, 1) = x;
             centroids(n, 2) = y;
@@ -328,83 +328,123 @@ function result = slic(img)
         end
     end
     
+    
 %%%%% STEP 2: Local Shift: Compute the magnitude of the 
 %%%%% gradient in each of the RGB channels 
-    magnitudes = zeros(X, Y, colors);
-    for i=1:X-1
-        for j=1:Y-1  
+%   iteration count
+    iter = 1;
+%   flag for stopping loop
+    flag = 0;
+    while flag == 0
+        magnitudes = zeros(X, Y, colors);
+        for i=1:X-1
+            for j=1:Y-1  
 %%%%% use the square root of the sum of squares of the three 
 %%%%% magnitudes as the combined gradient magnitude
-            magnitudes(i, j) = rbg_gradient(img(i, j, :), img(x+1, y, :), img(x, y+1, :));
+                magnitudes(i, j) = rbg_gradient(img(i, j, :), img(x+1, y, :), img(x, y+1, :));
+            end
         end
-    end
     
 %%%%% Move the centroids to the position with the smallest 
 %%%%% gradient magnitude in 3x3 windows centered on the 
 %%%%% initial centroids.
-    for n=1:nblocks
-        x = centroids(n,1);
-        y = centroids(n,2);
-        window = zeros(3,3);
-        for wi=-1:1
-            for wj=-1:1
-                window(wi+2, wj+2) = magnitudes(x+wi, y+wj);
+        for n=1:nblocks
+            x = centroids(n,1);
+            y = centroids(n,2);
+            window = zeros(3,3);
+            for wi=-1:1
+                for wj=-1:1
+                    window(wi+2, wj+2) = magnitudes(x+wi, y+wj);
+                end
             end
+            % Find minimum
+            win_min = min(min(window));
+            [mx, my] = find(window == win_min);
+            mx = mx(1) + x;
+            my = my(1) + y;
+            r = img(mx, my, 1);
+            g = img(mx, my, 2);
+            b = img(mx, my, 3);
+            centroids(n, 1) = mx;
+            centroids(n, 2) = my;
+            centroids(n, 3) = r;
+            centroids(n, 4) = g;
+            centroids(n, 5) = b;
         end
-        % Find minimum
-        win_min = min(min(window));
-        [mx, my] = find(window == win_min);
-        mx = mx(1);
-        my = my(1);
-        r = img(mx, my, 1);
-        g = img(mx, my, 2);
-        b = img(mx, my, 3);
-        centroids(n, 1) = mx;
-        centroids(n, 2) = my;
-        centroids(n, 3) = r;
-        centroids(n, 4) = g;
-        centroids(n, 5) = b;
-    end
-    
+        
+        
 %%%%% STEP 3: Centroid Update: Assign each pixel to its 
 %%%%% nearest centroid in the 5D space of x, y, R, G, B
 %%%%% and recompute centroids. Use the Euclidean distance
 %%%%% in this space, but divide x and y by 2.
 
-    % Initialize clustered to hold pixel locations and rgb values
-    % clustered -> [ ci x y r g b ]
-    clustered = zeros(X*Y, 6);
-    n = 1;
-    for i=1:X
-        for j=1:Y
-            %img x,y coordinates
-            clustered(n, 2) = i;
-            clustered(n, 3) = j;
-            %pixel rgb values
-            rgb = img(i, j, :);
-            clustered(n, 4) = rgb(1);
-            clustered(n, 5) = rgb(2);
-            clustered(n, 6) = rgb(3);
-            
-            % compute 5D distance 
-            clustered(n,1) = fived_distance(nblocks, centroids, i, j, rgb);
-            
-            n = n + 1;
+        % Initialize clustered to hold pixel locations and rgb values
+        % clustered -> [ ci x y r g b ]
+        clustered = zeros(X*Y, 6);
+        n = 1;
+        for i=1:X
+            for j=1:Y
+                %img x,y coordinates
+                clustered(n, 2) = i;
+                clustered(n, 3) = j;
+                %pixel rgb values
+                rgb = img(i, j, :);
+                clustered(n, 4) = rgb(1);
+                clustered(n, 5) = rgb(2);
+                clustered(n, 6) = rgb(3);
+
+                % compute 5D distance 
+                clustered(n,1) = fived_distance(nblocks, centroids, i, j, rgb);
+
+                n = n + 1;
+            end
         end
-    end
-    
-    % recompute centroids
-    
-        
+
+        % recompute centroids (x,y) average is center
+        % centroids - > [ x y r g b ]
+        new_centroids = zeros(nblocks, 5);
+        for ci=1:nblocks
+            sumx = 0;
+            sumy = 0;
+            cnt = 0;
+            for i=1:(X*Y)
+                c = clustered(i, 1);
+                if c == ci
+                    cnt = cnt + 1;
+                    sumx = sumx + clustered(i, 2);
+                    sumy = sumy + clustered(i, 3);
+                end
+            end
+            new_x = floor(sumx/cnt); 
+            new_y = floor(sumy/cnt);
+            new_centroids(ci, 1) = new_x;
+            new_centroids(ci, 2) = new_y;
+            new_rgb = img(new_x, new_y, :);
+            new_centroids(ci, 3) = new_rgb(1);
+            new_centroids(ci, 4) = new_rgb(2);
+            new_centroids(ci, 5) = new_rgb(3);
+        end
+
 %%%%% Optionally: only compare pixels to centroids
 %%%%% within a distance of 71 pixels (~sqrt(2)*50 block size)
 %%%%% during the updates.
 
 %%%%% STEP 4: If (not converged) and (iterations < max_iter)
 %%%%% THEN go to STEP 2. max_iter = 3
+        flag = check_ci(centroids, new_centroids);
+        if flag == 0 && iter < max_iter
+            centroids = new_centroids;
+            iter = iter + 1;
+        else
+            flag = 1;
+        end
+        
+    end
 
 %%%%% STEP 5: Display the output image as in the SLIC slide:
 %%%%% colorpixels that touch two different clusters black
 %%%%% and the remaining pixels by the average RGB value of
 %%%%% their cluster.
+    
+    
 end
