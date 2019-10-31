@@ -226,10 +226,15 @@ function result = k_means(k, img)
     result = c_img;  
 end 
 
-function mag = gradient_mag(g)
+function mag = gradient_mag(a, b)
     % Parameters
-        % g
+        % a - single rgb channel value
+        % b - single rgb channel value
     % Results
+        % mag - magnitude of gradient
+    
+    mag = sqrt(a^2 + b^2);
+    return;
 end
 
 function result = rbg_gradient(c, low, right)
@@ -238,12 +243,43 @@ function result = rbg_gradient(c, low, right)
         % low - x,y coordinates below c
         % right - x,y coordinates to right of c
     % Results
+        % result - rgb gradient
+    
+    r = gradient_mag(c(1)-low(1), c(1)-right(1));
+    g = gradient_mag(c(2)-low(2), c(2)-right(2));
+    b = gradient_mag(c(3)-low(3), c(3)-right(3));
+    result = sqrt(r^2 + g^2 + b^2);
+    return;
+end
+
+function ci = fived_distance(n, centroids, x, y, rgb)
+    closest_dist = inf;
+    closest_c = 0;
+    for ci=1:n
+        % Cluster RGB values 
+        crgb = centroids(ci, :);
+        cr = crgb(1);
+        cg = crgb(2);
+        cb = crgb(3);
+        
+        % Calculate color distance
+        r = (cr - pr)^2;
+        g = (cg - pg)^2;
+        b = (cb - pb)^2;
+        dis = sqrt(r + g + b);
+        if dis < closest_dist
+            closest_dist = dis;
+            closest_c = ci;
+        end
+    end
+    ci = closest_c;
 end
 
 function result = slic(img)
 %     get size of image
-    [X, Y, c] = size(img);
+    [X, Y, colors] = size(img);
     
+    img = double(img);
 %     Set maximum iteration value
     max_iter = 3;
     
@@ -257,31 +293,81 @@ function result = slic(img)
     % of the centroids
     % [ x y r g b ]
     centroids = zeros(nblocks, 5);
-    for i=1:blocksize:X
-        for j=1:blocksize:Y
+    n = 1;
+    for i=0:blocksize:X
+        for j=0:blocksize:Y
             x=(i+blocksize)/2;
             y=(j+blocksize)/2;
             ci_rgb=img(x,y,:);
-            centroids(1) = x;
-            centroids(2) = y;
-            centroids(3) = ci_rgb(1);
-            centroids(4) = ci_rgb(2);
-            centroids(5) = ci_rgb(3);
+            centroids(n, 1) = x;
+            centroids(n, 2) = y;
+            centroids(n, 3) = ci_rgb(1);
+            centroids(n, 4) = ci_rgb(2);
+            centroids(n, 5) = ci_rgb(3);
+            n = n + 1;
         end
     end
-
+    
 %%%%% STEP 2: Local Shift: Compute the magnitude of the 
 %%%%% gradient in each of the RGB channels 
-    
+    magnitudes = zeros(X, Y, colors);
+    for i=1:X-1
+        for j=1:Y-1  
 %%%%% use the square root of the sum of squares of the three 
 %%%%% magnitudes as the combined gradient magnitude
-
+            magnitudes(i, j) = rbg_gradient(img(i, j, :), img(x+1, y, :), img(x, y+1, :));
+        end
+    end
+    
 %%%%% Move the centroids to the position with the smallest 
 %%%%% gradient magnitude in 3x3 windows centered on the 
 %%%%% initial centroids.
-
+    for n=1:nblocks
+        x = centroids(n,1);
+        y = centroids(n,2);
+        window = zeros(3,3);
+        for wi=-1:1
+            for wj=-1:1
+                window(wi+2, wj+2) = magnitudes(x+wi, y+wj);
+            end
+        end
+        % Find minimum
+        win_min = min(min(window));
+        [mx, my] = find(window == win_min);
+        r = img(mx, my, 1);
+        g = img(mx, my, 2);
+        b = img(mx, my, 3);
+        centroids(n, 1) = mx;
+        centroids(n, 2) = my;
+        centroids(n, 3) = r;
+        centroids(n, 4) = g;
+        centroids(n, 5) = b;
+    end
+    
 %%%%% STEP 3: Centroid Update: Assign each pixel to its 
 %%%%% nearest centroid in the 5D space of x, y, R, G, B
+
+    % Initialize clustered to hold pixel locations and rgb values
+    % clustered -> [ ci x y r g b ]
+    clustered = zeros(X*Y, 6);
+    n = 1;
+    for i=1:X
+        for j=1:Y
+            %img x,y coordinates
+            clustered(n, 2) = i;
+            clustered(n, 3) = j;
+            %pixel rgb values
+            rgb = img(i, j, :);
+            clustered(n, 4) = rgb(1);
+            clustered(n, 5) = rgb(2);
+            clustered(n, 6) = rgb(3);
+            
+            ci = fived_distance(nblocks, centroids, i, j, rgb);
+            
+            n = n + 1;
+        end
+    end
+        
 %%%%% and recompute centroids. Use the Euclidean distance
 %%%%% in this space, but divide x and y by 2.
 
