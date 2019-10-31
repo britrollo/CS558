@@ -392,6 +392,9 @@ function result = slic(img)
             n = n + 1;
         end
     end
+    
+    % recompute centroids
+    
         
 %%%%% Optionally: only compare pixels to centroids
 %%%%% within a distance of 71 pixels (~sqrt(2)*50 block size)

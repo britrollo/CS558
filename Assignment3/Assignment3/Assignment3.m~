@@ -354,7 +354,8 @@ function result = slic(img)
         % Find minimum
         win_min = min(min(window));
         [mx, my] = find(window == win_min);
-        id
+        mx = mx(1);
+        my = my(1);
         r = img(mx, my, 1);
         g = img(mx, my, 2);
         b = img(mx, my, 3);
@@ -391,17 +392,17 @@ function result = slic(img)
             n = n + 1;
         end
     end
+    
+    %
         
-
-
-%%%%% STEP 4: Optionally: only compare pixels to centroids
+%%%%% Optionally: only compare pixels to centroids
 %%%%% within a distance of 71 pixels (~sqrt(2)*50 block size)
 %%%%% during the updates.
 
-%%%%% STEP 5: If (not converged) and (iterations < max_iter)
+%%%%% STEP 4: If (not converged) and (iterations < max_iter)
 %%%%% THEN go to STEP 2. max_iter = 3
 
-%%%%% STEP 6: Display the output image as in the SLIC slide:
+%%%%% STEP 5: Display the output image as in the SLIC slide:
 %%%%% colorpixels that touch two different clusters black
 %%%%% and the remaining pixels by the average RGB value of
 %%%%% their cluster.
