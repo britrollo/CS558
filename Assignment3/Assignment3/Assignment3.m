@@ -1,5 +1,5 @@
 function main ()
-%     %k-means
+%%%%%k-means
 %     k = 10;
 %     img = imread("white-tower.png");
 %     figure(1);
@@ -8,7 +8,7 @@ function main ()
 %     figure(2);
 %     imshow(uint8(result));
    
-    %SLIC 
+%%%%%SLIC 
     img2 = imread("wt_slic.png");
     figure(3);
     imshow(img2);
@@ -282,7 +282,8 @@ function ci = fived_distance(n, centroids, x, y, rgb)
         r = (cr - pr)^2;
         g = (cg - pg)^2;
         b = (cb - pb)^2;
-        % Calculate x,y distance divided by 2
+        % Calculate x,y distance divided by 2 (as stated in assignment)
+        % (Also try with multiplied by 2 and no modifications)
         xd = ((cx - x)/2)^2; 
         yd = ((cy - y)/2)^2;
         dis = sqrt(xd + yd + r + g + b);
