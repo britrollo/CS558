@@ -7,19 +7,24 @@ function main ()
 %     result = k_means(k, img);
 %     figure(2);
 %     imshow(uint8(result));
+%     title("k-means");
    
 %%%%%SLIC 
+% works with other image 
+% 1 for optional step
+
     img2 = imread("wt_slic.png");
     figure(3);
     imshow(img2);
     result = slic(img2, 0);
     figure(4);
     imshow(uint8(result));
-    title("SLIC)
+    title("SLIC");
     
     result = slic(img2, 1);
     figure(5);
     imshow(uint8(result));
+    title("SLIC with Optional Step");
 end
 
 function result = point_check(lst, rgb)
@@ -403,7 +408,7 @@ function result = slic(img, option)
 %%%%% STEP 1: Initialization: Divide the image in blocks of
 %%%%% 50x50 pixels
     blocksize = 50;
-    nblocks = (X/blocksize)*(Y/blocksize);
+    nblocks = (floor(X/blocksize))*(floor(Y/blocksize));
     
 %%%%% initialize a centroid at the center of each block
     % centroids holds the (x,y) coordinates and rgb values
@@ -415,12 +420,14 @@ function result = slic(img, option)
         for j=0:blocksize:Y-1
             x= i+(blocksize/2);
             y=j+(blocksize/2);
-            ci_rgb=img(x,y,:);
-            centroids(n, 1) = x;
-            centroids(n, 2) = y;
-            centroids(n, 3) = ci_rgb(1);
-            centroids(n, 4) = ci_rgb(2);
-            centroids(n, 5) = ci_rgb(3);
+            if x <= X && y <= Y
+                ci_rgb=img(x,y,:);
+                centroids(n, 1) = x;
+                centroids(n, 2) = y;
+                centroids(n, 3) = ci_rgb(1);
+                centroids(n, 4) = ci_rgb(2);
+                centroids(n, 5) = ci_rgb(3);
+            end
             n = n + 1;
         end
     end
@@ -433,12 +440,12 @@ function result = slic(img, option)
 %   flag for stopping loop
     flag = 0;
     while flag == 0
-        magnitudes = zeros(X, Y, colors);
+        magnitudes = zeros(X, Y);
         for i=1:X-1
             for j=1:Y-1  
 %%%%% use the square root of the sum of squares of the three 
 %%%%% magnitudes as the combined gradient magnitude
-                magnitudes(i, j) = rbg_gradient(img(i, j, :), img(x+1, y, :), img(x, y+1, :));
+                magnitudes(i, j) = rbg_gradient(img(i, j, :), img(i+1, j, :), img(i, j+1, :));
             end
         end
     
@@ -451,7 +458,14 @@ function result = slic(img, option)
             window = zeros(3,3);
             for wi=-1:1
                 for wj=-1:1
-                    window(wi+2, wj+2) = magnitudes(x+wi, y+wj);
+                    window(wi+2, wj+2);
+                    magnitudes(x+wi, y+wj);
+                    if x+wi > X || y+wj > Y
+                            window(wi+2, wj+2) = inf;
+                    else
+                        window(wi+2, wj+2) = magnitudes(x+wi, y+wj);
+                    end
+                    
                 end
             end
             % Find minimum
@@ -524,6 +538,9 @@ function result = slic(img, option)
             end
             new_x = floor(sumx/cnt); 
             new_y = floor(sumy/cnt);
+            if isnan(new_x)
+                disp(ci);
+            end
             new_centroids(ci, 1) = new_x;
             new_centroids(ci, 2) = new_y;
             new_rgb = img(new_x, new_y, :);
