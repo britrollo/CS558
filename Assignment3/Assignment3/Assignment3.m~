@@ -1,13 +1,12 @@
 function main ()
 %%%%%k-means
-    k = 10;
-    img = imread("white-tower.png");
-    figure(1);
-    imshow(img);
-    result = k_means(k, img);
-    figure(2);
-    imshow(uint8(result));
-    title("k-means");
+%     k = 10;
+%     img = imread("white-tower.png");
+%     figure(1);
+%     imshow(img);
+%     result = k_means(k, img);
+%     figure(2);
+%     imshow(uint8(result));
    
 %%%%%SLIC 
     img2 = imread("wt_slic.png");
@@ -16,12 +15,11 @@ function main ()
     result = slic(img2, 0);
     figure(4);
     imshow(uint8(result));
-    title("SLIC");
+    title("SLIC)
     
     result = slic(img2, 1);
     figure(5);
     imshow(uint8(result));
-    title("SLIC with Optional Step");
 end
 
 function result = point_check(lst, rgb)
