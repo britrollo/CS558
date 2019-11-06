@@ -1,13 +1,13 @@
 function main ()
 %%%%%k-means
-%     k = 10;
-%     img = imread("white-tower.png");
-%     figure(1);
-%     imshow(img);
-%     result = k_means(k, img);
-%     figure(2);
-%     imshow(uint8(result));
-%     title("k-means");
+    k = 10;
+    img = imread("white-tower.png");
+    figure(1);
+    imshow(img);
+    result = k_means(k, img);
+    figure(2);
+    imshow(uint8(result));
+    title("k-means");
    
 %%%%%SLIC 
 % works with other image 
@@ -458,8 +458,6 @@ function result = slic(img, option)
             window = zeros(3,3);
             for wi=-1:1
                 for wj=-1:1
-                    window(wi+2, wj+2);
-                    magnitudes(x+wi, y+wj);
                     if x+wi > X || y+wj > Y
                             window(wi+2, wj+2) = inf;
                     else
