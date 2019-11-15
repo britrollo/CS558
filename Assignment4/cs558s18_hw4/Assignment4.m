@@ -3,7 +3,14 @@ function main()
 % run problem 1 with different amounts of bins
     bins = 8;
     directory = "ImClass";
-    result = classifyIm(bins, directory);
+    classifyIm(bins, directory);
+    bins2 = 16;
+    classifyIm(bins2, directory);
+    
+    k = 10;
+    directory = "sky";
+    classifyPix(k, directory);
+    
 end
 
 function result = twentyfourdistance(test, train)
@@ -20,7 +27,7 @@ function result = twentyfourdistance(test, train)
 end
 
 % PROBLEM 1: Image Classification
-function result = classifyIm(bins, directory)
+function classifyIm(bins, directory)
 % Step1: Get images from ImClass directory
     test_images = dir(fullfile(directory, "*test*.jpg"));
     train_images = dir(fullfile(directory, "*train*.jpg"));
@@ -62,7 +69,7 @@ function result = classifyIm(bins, directory)
         [X, Y, ~] = size(img);
         for i=1:X
             for j=1:Y
-                % Step3: Each pixel votes in each histogram
+                % Step6: Each pixel votes in each histogram
                 div = ceil((255+1)/bins);   % (255+1) to cover range from 0 to 255
                 rgb = img(i,j,:);
                 rv = rgb(1)+1;              % +1 to adjust for 0
@@ -73,13 +80,36 @@ function result = classifyIm(bins, directory)
                 test_hists(ii).b(ceil(bv/div)) = test_hists(ii).b(ceil(bv/div)) + 1;
             end
         end
+        % Step7: Assign to the test image the label of the training image
+        % that has the "nearest" representation
+        % "nearest" representation computed by using the Euclidean distance
+        % in the 24D histogram space 
         closest = twentyfourdistance(test_hists(ii), train_hists);
         disp("Test image " + string(ii) + " of class " + string(ceil(ii/4)) + " has been assigned to class " + string(ceil(closest/4)) + ".");
         if ceil(ii/4) == ceil(closest/4)
             correct = correct + 1;
         end
     end
-    disp("Accuracy: " + string(correct/length(test_images)));
+    % Step8: Compute accuracy of classifier
+    disp("Bins: " + string(bins) + "- Accuracy: " + string(correct/length(test_images)));
+end
+
+% PROBLEM 2: Pixel Classification
+function classifyPix(k, directory)
+    %Step1: Use nonsky as a mask to separate sky from non-sky pixels during
+    %training 
+    % Load both the original input image and the one you created which is
+    % used as to guide the formation of the training set
     
-% Classify each image into one of three classes: coast, forest, or "insidecity"
+    %Step2: Run k-means separately on the sky and non-sky sets with k=10 to
+    % obtain 10 visual words for each class
+    % kmeans(sky, k, 'EmptyAction, 'singleton')
+    
+    %Step3: for each pixel of the test image find the nearest word and
+    %classify it as sky or nonsky (brute force acceptable)
+    
+    %Step4: Generate an output image in which the sky pixels are painted
+    %with a distinctive color
+    
+    
 end
