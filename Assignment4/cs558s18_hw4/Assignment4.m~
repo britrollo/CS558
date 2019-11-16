@@ -1,11 +1,16 @@
 function main()
 % TODO
 % run problem 1 with different amounts of bins
-    bins = 8;
-    directory = "ImClass";
-    classifyIm(bins, directory);
-    bins2 = 16;
-    classifyIm(bins2, directory);
+%     bins = 8;
+%     directory = "ImClass";
+%     classifyIm(bins, directory);
+%     bins2 = 16;
+%     classifyIm(bins2, directory);
+    
+    k = 10;
+    directory = "sky";
+    classifyPix(k, directory);
+    
 end
 
 function result = twentyfourdistance(test, train)
@@ -86,10 +91,55 @@ function classifyIm(bins, directory)
         end
     end
     % Step8: Compute accuracy of classifier
-    disp("Bins: " + string(bins) + "; Accuracy: " + string(correct/length(test_images)));
+    disp("Bins: " + string(bins) + "- Accuracy: " + string(correct/length(test_images)));
 end
 
 % PROBLEM 2: Pixel Classification
-function result = classifyPix()
-    %Step1: Use nonsky as a mask to separate sky fr
+function classifyPix(k, directory)
+    % Step1: Load both the original input image and the one you created which is
+    % used as to guide the formation of the training set
+    train_images = dir(fullfile(directory, "*train*.jpg"));
+    test_images = dir(fullfile(directory, "*test*.jpg"));
+    non = dir(fullfile(directory, "non*train*.jpg"));
+    for ii=1:length(train_images)
+        if strcmp(non.name, train_images(ii).name) == 0
+            img = imread(strcat(train_images(ii).folder, "/", train_images(ii).name));
+        else
+            mask = imread(strcat(train_images(ii).folder, "/", train_images(ii).name));
+        end
+    end
+    %Step2: Use nonsky as a mask to separate sky from non-sky pixels during
+    %training
+    [X, Y, ~] = size(img);
+    sky = [];
+    nonsky = [];
+    sky_idx = 1;
+    nonsky_idx = 1;
+    for i=1:X
+        for j=1:Y
+            if mask(i,j,1) == 255 && mask(i,j,2) == 255 && mask(i,j,3) == 255
+                sky(sky_idx, :) = img(i,j,:);
+                sky_idx = sky_idx + 1;
+            else
+                nonsky(nonsky_idx, :) = img(i,j,:);
+                nonsky_idx = nonsky_idx + 1;
+            end
+        end
+    end
+    %Step3: Run k-means separately on the sky and non-sky sets with k=10 to
+    % obtain 10 visual words for each class
+    % kmeans(sky, k, 'EmptyAction, 'singleton')
+    [~, sky_word] = kmeans(sky, k, 'EmptyAction', 'singleton');
+    [~, nonsky_word] = kmeans(nonsky, k, 'EmptyAction', 'singleton');
+    
+    %Step4: for each pixel of the test image find the nearest word and
+    %classify it as sky or nonsky (brute force acceptable)
+    for i=1:length(test_images)
+        img = imread(strcat(test_images(ii).folder, "/", tes_images(ii).name));
+    end
+    
+    %Step5: Generate an output image in which the sky pixels are painted
+    %with a distinctive color
+    
+    
 end
