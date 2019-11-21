@@ -126,21 +126,34 @@ function classifyPix(k, directory)
             end
         end
     end
+    
     %Step3: Run k-means separately on the sky and non-sky sets with k=10 to
     % obtain 10 visual words for each class
     % kmeans(sky, k, 'EmptyAction, 'singleton')
-    [~, sky_word] = kmeans(sky, k, 'EmptyAction', 'singleton');
-    [~, nonsky_word] = kmeans(nonsky, k, 'EmptyAction', 'singleton');
+    [~, sky_word] = kmeans(sky, k, 'EmptyAction', 'singleton');     %10x3
+    [~, nonsky_word] = kmeans(nonsky, k, 'EmptyAction', 'singleton'); 
+    word=[ones(k,1) sky_word;zeros(k,1) nonsky_word]; % combine all words into one word list, marking sky 1 and nonsky 0
     
     %Step4: for each pixel of the test image find the nearest word and
     %classify it as sky or nonsky (brute force acceptable)
     for i=1:length(test_images)
-        img = imread(strcat(test_images(ii).folder, "/", test_images(ii).name));
+        img = imread(strcat(test_images(i).folder, "/", test_images(i).name));
+        [X, Y, c] = size(img);
+        reshape_img = double(reshape(img, X*Y, c, 1)); %Reshape image's matrix
         
+        word_idx = knnsearch(word(:,2:end),reshape_img,'k',1,'Distance','euclidean');
+        closest_word = word(word_idx,1);
+        [x,y] = ind2sub([X Y], 1:X*Y);
+        
+        for j=1:X*Y
+            %Step5: Generate an output image in which the sky pixels are painted
+            %with a distinctive color
+            if closest_word(j) == 1
+                img(x(j),y(j),1)=255;
+                img(x(j),y(j),2)=0;
+                img(x(i),y(i),3)=0;
+            end
+        end
+        imshow(img);
     end
-    
-    %Step5: Generate an output image in which the sky pixels are painted
-    %with a distinctive color
-    
-    
 end
