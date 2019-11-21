@@ -1,12 +1,13 @@
 function main()
-% TODO
-% run problem 1 with different amounts of bins
-%     bins = 8;
-%     directory = "ImClass";
-%     classifyIm(bins, directory);
-%     bins2 = 16;
-%     classifyIm(bins2, directory);
+    % Problem 1 : Image Classification
+    bins = 8;
+    directory = "ImClass";
+    classifyIm(bins, directory);
+    % See if you can increase the accuracy by changing the number of bins in the histogram 
+    bins2 = 16;
+    classifyIm(bins2, directory);
     
+    % Problem 2: Pixel Classification
     k = 10;
     directory = "sky";
     classifyPix(k, directory);
