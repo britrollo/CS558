@@ -2,7 +2,7 @@ function main()
     % Problem 1 : Image Classification
     bins = 8;
     directory = "ImClass";
-    classifyIm(bins, directory);
+    classifyIm(bins, directory); 
     % See if you can increase the accuracy by changing the number of bins in the histogram 
     bins2 = 16;
     classifyIm(bins2, directory);
@@ -35,6 +35,7 @@ function classifyIm(bins, directory)
 % Step2: For training set images, Create 3 separate histograms (with 8 bins each) of the R, G, and B color channels
 % each image is represented by 24 numbers
     train_hists(1:length(train_images)) = struct('r', zeros(1, bins), 'g', zeros(1, bins), 'b', zeros(1, bins));
+    vote_check = 0;
     for ii=1:length(train_images)
         img = imread(strcat(train_images(ii).folder, "/", train_images(ii).name));
         img = double(img);
@@ -54,16 +55,20 @@ function classifyIm(bins, directory)
         end
         % Step4: Verify all pixels are counted exactly 3 times
         result = sum(train_hists(ii).r) + sum(train_hists(ii).g) + sum(train_hists(ii).b);
-        if result == X*Y*3
-            disp("Each pixel of " + train_images(ii).name + " has 3 votes.");
-        else
+        if result ~= X*Y*3
             disp("Voting Error: " + train_images(ii).name);
+        else
+            vote_check = vote_check + 1;
         end
+    end
+    if vote_check == length(train_images)
+        disp("Each pixel of all training images has 3 votes.");
     end
     
     % Step 5: compute 3 histogram representation for test images
     test_hists(1:length(test_images)) = struct('r', zeros(1, bins), 'g', zeros(1, bins), 'b', zeros(1, bins));
     correct = 0;
+    vote_check = 0;
     for ii=1:length(test_images)
         img = imread(strcat(test_images(ii).folder, "/", test_images(ii).name));
         img = double(img);
@@ -81,6 +86,13 @@ function classifyIm(bins, directory)
                 test_hists(ii).b(ceil(bv/div)) = test_hists(ii).b(ceil(bv/div)) + 1;
             end
         end
+        result = sum(test_hists(ii).r) + sum(test_hists(ii).g) + sum(test_hists(ii).b);
+        if X*Y*3 == result
+            vote_check = vote_check + 1;
+        else
+           disp("Voting Error: " + trest_images(ii).name);
+        end
+        
         % Step7: Assign to the test image the label of the training image
         % that has the "nearest" representation
         % "nearest" representation computed by using the Euclidean distance
@@ -91,8 +103,11 @@ function classifyIm(bins, directory)
             correct = correct + 1;
         end
     end
+    if vote_check == length(test_images)
+        disp("Each pixel of all test images has 3 votes.");
+    end
     % Step8: Compute accuracy of classifier
-    disp("Bins: " + string(bins) + "- Accuracy: " + string(correct/length(test_images)));
+    disp("Bins: " + string(bins) + " -- Accuracy: " + string(correct/length(test_images)));
 end
 
 % PROBLEM 2: Pixel Classification
@@ -152,9 +167,10 @@ function classifyPix(k, directory)
             if closest_word(j) == 1
                 img(x(j),y(j),1)=255;
                 img(x(j),y(j),2)=0;
-                img(x(i),y(i),3)=0;
+                img(x(j),y(j),3)=0;
             end
         end
+        figure(i);
         imshow(img);
     end
 end
